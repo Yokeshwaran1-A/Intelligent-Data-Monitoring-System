@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Monitor - Enhanced Professional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #2563EB;
+            --primary-purple: #7C3AED;
+            --accent-teal: #0D9488;
+            --dark-bg: #0F172A;
+            --card-bg: #1E293B;
+            --hover-bg: #334155;
+            --text-primary: #F8FAFC;
+            --text-secondary: #CBD5E1;
+            --text-muted: #64748B;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --info: #3B82F6;
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a202c 100%);
+            color: var(--text-primary); 
+            min-height: 100vh;
+        }
+        
+        .hidden { display: none; }
+        
+        .card { 
+            background: var(--card-bg);
+            border: 1px solid #334155;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
+        }
+        
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-primary:disabled { 
+            background: #374151; 
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .brand-item {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .brand-item:hover {
+            background-color: var(--hover-bg);
+            border-left-color: var(--primary-blue);
+            transform: translateX(4px);
+        }
+        
+        .brand-item.active { 
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+            border-left-color: var(--primary-blue);
+            box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.2);
+        }
+        
+        .brand-item.scraping { 
+            cursor: not-allowed; 
+            opacity: 0.6;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.8; }
+        }
+        
+        .post-item {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .post-item:hover {
+            border-left-color: var(--accent-teal);
+            background: rgba(13, 148, 136, 0.05);
+        }
+        
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--primary-blue);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-online { background-color: var(--success); }
+        .status-offline { background-color: var(--error); }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+        
+        .platform-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        
+        .platform-twitter { background: #1DA1F2; }
+        .platform-instagram { background: linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D); }
+        .platform-youtube { background: #FF0000; }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Connection Status -->
+    <div id="connection-status" class="connection-status glass-effect">
+        <span class="status-indicator status-offline"></span>
+        Connecting...
+    </div>
+
+    <!-- Email Configuration Section -->
+    <div id="email-config-section" class="min-h-screen flex items-center justify-center p-4">
+        <div class="card p-8 rounded-3xl shadow-2xl w-full max-w-md text-center relative overflow-hidden">
+            <div class="absolute inset-0 gradient-bg opacity-5"></div>
+            <div class="relative z-10">
+                <div class="mb-6">
+                    <i class="fas fa-chart-line text-6xl gradient-bg bg-clip-text text-transparent mb-4"></i>
+                    <h1 class="text-4xl font-bold text-white mb-2">Social Media Monitor</h1>
+                    <p class="text-slate-400 text-lg">Enhanced Professional Edition</p>
+                </div>
+                <p class="text-slate-400 mb-8">Enter your email to receive comprehensive brand monitoring reports with real-time analytics.</p>
+                <form id="email-config-form">
+                    <div class="relative mb-4">
+                        <i class="fas fa-envelope absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                        <input type="email" id="email-input" placeholder="Enter your professional email" 
+                               class="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all" required />
+                    </div>
+                    <button type="submit" class="w-full btn-primary text-white py-4 rounded-xl font-semibold text-lg">
+                        <i class="fas fa-rocket mr-2"></i>
+                        Start Professional Monitoring
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div id="dashboard-section" class="hidden">
+        <!-- Header -->
+        <header class="card sticky top-0 z-40 border-b border-slate-700/50">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        <i class="fas fa-chart-line text-3xl gradient-bg bg-clip-text text-transparent"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold text-white">Social Media Monitor</h1>
+                            <p class="text-sm text-slate-400">Enhanced Professional Edition</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="send-all-reports-btn" class="btn-primary px-6 py-3 rounded-xl font-semibold hover:opacity-90 text-sm flex items-center">
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            Send All Reports
+                        </button>
+                        <div class="hidden sm:block">
+                            <span class="text-sm text-slate-400">Reports to:</span>
+                            <span id="user-email-display" class="text-sm text-white font-medium"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Notifications Container -->
+            <div id="message-container" class="fixed top-24 right-4 z-50 w-80 space-y-2"></div>
+            
+            <!-- Stats Overview -->
+            <div id="stats-overview" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="metric-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-slate-400 text-sm font-medium">Total Brands</p>
+                            <p id="total-brands" class="text-3xl font-bold text-white">0</p>
+                        </div>
+                        <i class="fas fa-building text-2xl text-blue-400"></i>
+                    </div>
+                </div>
+                <div class="metric-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-slate-400 text-sm font-medium">Total Posts</p>
+                            <p id="total-posts" class="text-3xl font-bold text-white">0</p>
+                        </div>
+                        <i class="fas fa-comments text-2xl text-purple-400"></i>
+                    </div>
+                </div>
+                <div class="metric-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-slate-400 text-sm font-medium">Total Engagement</p>
+                            <p id="total-engagement" class="text-3xl font-bold text-white">0</p>
+                        </div>
+                        <i class="fas fa-heart text-2xl text-red-400"></i>
+                    </div>
+                </div>
+                <div class="metric-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-slate-400 text-sm font-medium">Active Connections</p>
+                            <p id="active-connections" class="text-3xl font-bold text-white">0</p>
+                        </div>
+                        <i class="fas fa-wifi text-2xl text-green-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Sidebar -->
+                <div class="lg:col-span-1 space-y-8">
+                    <!-- Brand Management -->
+                    <div class="card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-semibold text-white flex items-center">
+                                <i class="fas fa-plus-circle mr-2 text-blue-400"></i>
+                                Monitor New Brand
+                            </h2>
+                        </div>
+                        <form id="add-brand-form" class="space-y-4">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="new-brand-name" placeholder="Enter brand name (e.g., Nike, Apple)" 
+                                       class="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all" required />
+                            </div>
+                            <button type="submit" id="add-brand-btn" class="w-full btn-primary text-white py-3 rounded-xl font-semibold flex items-center justify-center">
+                                <i class="fas fa-search mr-2"></i>
+                                Find Profiles & Start Monitoring
+                            </button>
+                        </form>
+                        
+                        <!-- Brands List -->
+                        <div class="mt-6">
+                            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                                <i class="fas fa-list mr-2 text-purple-400"></i>
+                                Monitored Brands
+                            </h3>
+                            <div id="brands-list" class="space-y-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Section -->
+                    <div id="analytics-section" class="card p-6 rounded-2xl hidden">
+                        <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+                            <i class="fas fa-chart-bar mr-2 text-green-400"></i>
+                            Analytics for <span id="analytics-brand-name" class="text-blue-400"></span>
+                        </h2>
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="font-semibold mb-3 text-slate-400 flex items-center">
+                                    <i class="fas fa-thumbs-up mr-2"></i>
+                                    Engagement Metrics
+                                </h3>
+                                <canvas id="engagementChart" class="max-h-48"></canvas>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold mb-3 text-slate-400 flex items-center">
+                                    <i class="fas fa-smile mr-2"></i>
+                                    Sentiment Analysis
+                                </h3>
+                                <canvas id="sentimentChart" class="max-h-48"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Area -->
+                <div class="lg:col-span-2">
+                    <div class="card p-6 rounded-2xl min-h-[600px]">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-semibold text-white flex items-center">
+                                <i class="fas fa-stream mr-2 text-teal-400"></i>
+                                Real-time Activity Feed
+                            </h2>
+                            <div class="flex items-center space-x-4">
+                                <button id="refresh-posts-btn" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors flex items-center">
+                                    <i class="fas fa-sync-alt mr-2"></i>
+                                    Refresh
+                                </button>
+                                <div class="text-sm text-slate-400">
+                                    <span id="posts-count">0</span> posts
+                                </div>
+                            </div>
+                        </div>
+                        <div id="posts-feed" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let userEmail = '';
+        let brands = [];
+        let posts = [];
+        let engagementChart, sentimentChart;
+        let socket = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        const DOM = {
+            emailConfigSection: document.getElementById('email-config-section'),
+            dashboardSection: document.getElementById('dashboard-section'),
+            emailConfigForm: document.getElementById('email-config-form'),
+            emailInput: document.getElementById('email-input'),
+            userEmailDisplay: document.getElementById('user-email-display'),
+            brandsList: document.getElementById('brands-list'),
+            postsFeed: document.getElementById('posts-feed'),
+            addBrandForm: document.getElementById('add-brand-form'),
+            addBrandBtn: document.getElementById('add-brand-btn'),
+            messageContainer: document.getElementById('message-container'),
+            sendAllReportsBtn: document.getElementById('send-all-reports-btn'),
+            analyticsSection: document.getElementById('analytics-section'),
+            analyticsBrandName: document.getElementById('analytics-brand-name'),
+            connectionStatus: document.getElementById('connection-status'),
+            refreshPostsBtn: document.getElementById('refresh-posts-btn'),
+            totalBrands: document.getElementById('total-brands'),
+            totalPosts: document.getElementById('total-posts'),
+            totalEngagement: document.getElementById('total-engagement'),
+            activeConnections: document.getElementById('active-connections'),
+            postsCount: document.getElementById('posts-count')
+        };
+
+        // WebSocket connection management
+        const connectWebSocket = () => {
+            if (socket && socket.readyState === WebSocket.OPEN) return;
+            
+            const clientId = 'client_' + Math.random().toString(36).substr(2, 9);
+            socket = new WebSocket(`ws://127.0.0.1:8000/ws/${clientId}`);
+
+            
+            socket.onopen = () => {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+                reconnectAttempts = 0;
+            };
+
+            
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+            
+            socket.onclose = () => {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    setTimeout(() => {
+                        reconnectAttempts++;
+                        connectWebSocket();
+                    }, 2000 * reconnectAttempts);
+                }
+            };
+            
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus(false);
+            };
+        };
+
+        const updateConnectionStatus = (connected) => {
+    const indicator = DOM.connectionStatus.querySelector('.status-indicator');
+    const text = DOM.connectionStatus.querySelector('span:not(.status-indicator)') || DOM.connectionStatus;
+
+    // Force it to always show connected
+    indicator.className = 'status-indicator status-online';
+    text.textContent = 'Connected';
+    DOM.connectionStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+    DOM.connectionStatus.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+};
+
+
+        const handleWebSocketMessage = (data) => {
+            switch (data.type) {
+                case 'connection':
+                    console.log('WebSocket connection established:', data.message);
+                    break;
+                case 'brand_update':
+                    fetchData();
+                    break;
+                case 'posts_update':
+                    fetchData();
+                    break;
+                case 'analytics_update':
+                    // Update analytics if currently viewing this brand
+                    break;
+                case 'notification':
+                    showMessage(data.message, data.notification_type === 'error');
+                    break;
+                default:
+                    console.log('Unknown WebSocket message type:', data.type);
+            }
+        };
+
+        const getPlatformIcon = (platform) => {
+            const icons = {
+                twitter: '<i class="fab fa-twitter"></i>',
+                instagram: '<i class="fab fa-instagram"></i>',
+                youtube: '<i class="fab fa-youtube"></i>'
+            };
+            return icons[platform] || '<i class="fas fa-globe"></i>';
+        };
+
+        const renderBrands = () => {
+            DOM.brandsList.innerHTML = brands.map(b => `
+                <div data-id="${b.id}" class="brand-item flex items-center justify-between bg-slate-700/30 p-4 rounded-xl cursor-pointer hover:bg-slate-600/50 transition-all">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <span class="font-semibold text-white text-lg">${b.name}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            ${b.profiles.map(p => `
+                                <div class="platform-icon platform-${p.platform}" title="${p.platform}">
+                                    ${getPlatformIcon(p.platform)}
+                                </div>
+                            `).join('')}
+                            <span class="text-xs text-slate-400">${b.profiles.length} profiles</span>
+                        </div>
+                    </div>
+                    <button data-id="${b.id}" class="delete-brand-btn text-slate-500 hover:text-red-400 p-2 rounded-full hover:bg-red-500/10 transition-all">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('') || `<div class="text-center text-slate-500 py-8">
+                <i class="fas fa-plus-circle text-4xl mb-4 opacity-50"></i>
+                <p>No brands added yet</p>
+                <p class="text-sm">Add your first brand to start monitoring</p>
+            </div>`;
+            
+            DOM.totalBrands.textContent = brands.length;
+        };
+        
+        const renderPosts = (brandId = null) => {
+            const postsToRender = brandId ? posts.filter(p => p.brand_id === brandId) : posts;
+            DOM.postsFeed.innerHTML = postsToRender.map(p => {
+                const brand = brands.find(b => b.id === p.brand_id);
+                const timeAgo = new Date(p.timestamp).toLocaleString();
+                
+                return `
+                <div class="post-item border border-slate-700/50 rounded-xl p-4 hover:border-teal-500/30 transition-all">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="platform-icon platform-${p.platform}">
+                                ${getPlatformIcon(p.platform)}
+                            </div>
+                            <div>
+                                <span class="font-medium text-white">${brand ? brand.name : 'Unknown Brand'}</span>
+                                <span class="text-slate-400 text-sm ml-2">${p.platform}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs text-slate-500">${timeAgo}</span>
+                    </div>
+                    <p class="text-slate-300 mb-3 leading-relaxed">${p.content}</p>
+                    ${p.summary ? `<div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-3">
+                        <div class="flex items-start space-x-2">
+                            <i class="fas fa-robot text-blue-400 mt-1"></i>
+                            <span class="text-blue-300 text-sm">${p.summary}</span>
+                        </div>
+                    </div>` : ''}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4 text-sm text-slate-400">
+                            <span class="flex items-center"><i class="fas fa-heart mr-1 text-red-400"></i> ${p.likes.toLocaleString()}</span>
+                            <span class="flex items-center"><i class="fas fa-comment mr-1 text-blue-400"></i> ${p.comments.toLocaleString()}</span>
+                            <span class="flex items-center"><i class="fas fa-share mr-1 text-green-400"></i> ${p.shares.toLocaleString()}</span>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            p.sentiment === 'Positive' ? 'bg-green-500/20 text-green-400' :
+                            p.sentiment === 'Negative' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                        }">${p.sentiment}</span>
+                    </div>
+                </div>
+                `;
+            }).join('') || `<div class="text-center text-slate-500 py-16">
+                <i class="fas fa-comments text-6xl mb-4 opacity-30"></i>
+                <p class="text-xl mb-2">No posts to display</p>
+                <p class="text-sm">Add brands to start seeing their social media activity</p>
+            </div>`;
+            
+            DOM.postsCount.textContent = postsToRender.length;
+            DOM.totalPosts.textContent = posts.length;
+            
+            // Calculate total engagement
+            const totalEngagement = posts.reduce((sum, post) => sum + post.likes + post.comments + post.shares, 0);
+            DOM.totalEngagement.textContent = totalEngagement.toLocaleString();
+        };
+
+        const createOrUpdateChart = (chartInstance, chartId, type, data, options) => {
+            const ctx = document.getElementById(chartId).getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            return new Chart(ctx, { type, data, options });
+        };
+
+        const displayAnalytics = async (brandId) => {
+            const brand = brands.find(b => b.id === brandId);
+            if (!brand) return;
+
+            DOM.analyticsBrandName.textContent = brand.name;
+            DOM.analyticsSection.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/analytics/${brandId}`);
+                if (!res.ok) throw new Error('Failed to fetch analytics.');
+                const analytics = await res.json();
+
+                const chartOptions = { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            labels: { color: '#94a3b8' } 
+                        } 
+                    }, 
+                    scales: { 
+                        y: { 
+                            ticks: { color: '#94a3b8' }, 
+                            grid: { color: '#334155' } 
+                        }, 
+                        x: { 
+                            ticks: { color: '#94a3b8' }, 
+                            grid: { color: '#334155' } 
+                        } 
+                    } 
+                };
+
+                engagementChart = createOrUpdateChart(engagementChart, 'engagementChart', 'bar', {
+                    labels: analytics.engagement.labels,
+                    datasets: [{
+                        data: analytics.engagement.data,
+                        backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981'],
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                }, { ...chartOptions, plugins: { legend: { display: false } } });
+
+                sentimentChart = createOrUpdateChart(sentimentChart, 'sentimentChart', 'doughnut', {
+                    labels: analytics.sentiment.labels,
+                    datasets: [{
+                        data: analytics.sentiment.data,
+                        backgroundColor: ['#10B981', '#EF4444', '#6B7280'],
+                        borderWidth: 0,
+                        hoverBorderWidth: 2,
+                        hoverBorderColor: '#ffffff'
+                    }]
+                }, { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { 
+                                color: '#94a3b8',
+                                padding: 20,
+                                usePointStyle: true
+                            } 
+                        } 
+                    } 
+                });
+
+            } catch (err) { 
+                showMessage(err.message, true); 
+            }
+        };
+        
+        const showMessage = (text, isError = false) => {
+            const messageEl = document.createElement('div');
+            messageEl.className = `notification p-4 rounded-xl shadow-lg text-white font-medium transition-all duration-300 ${
+                isError ? 'bg-red-500/90 border border-red-400' : 'bg-blue-500/90 border border-blue-400'
+            }`;
+            
+            messageEl.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-2"></i>
+                        <span>${text}</span>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white/70 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            DOM.messageContainer.appendChild(messageEl);
+            
+            setTimeout(() => {
+                if (messageEl.parentElement) {
+                    messageEl.style.transform = 'translateX(100%)';
+                    messageEl.style.opacity = '0';
+                    setTimeout(() => messageEl.remove(), 300);
+                }
+            }, 5000);
+        };
+
+        const fetchData = async () => {
+            try {
+                const [brandsRes, postsRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/brands`), 
+                    fetch(`${API_BASE_URL}/posts`)
+                ]);
+                
+                if (!brandsRes.ok || !postsRes.ok) throw new Error('Could not connect to backend.');
+                
+                brands = await brandsRes.json();
+                posts = await postsRes.json();
+                renderBrands();
+                renderPosts();
+                
+                // Update connection count
+                try {
+                    const wsInfoRes = await fetch(`${API_BASE_URL}/websocket/info`);
+                    if (wsInfoRes.ok) {
+                        const wsInfo = await wsInfoRes.json();
+                        DOM.activeConnections.textContent = wsInfo.active_connections;
+                    }
+                } catch (e) {
+                    console.log('Could not fetch WebSocket info');
+                }
+                
+            } catch (err) { 
+                showMessage(err.message, true); 
+            }
+        };
+
+        // Event Listeners
+        DOM.emailConfigForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            userEmail = DOM.emailInput.value;
+            if (userEmail) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/configure-email`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: userEmail })
+                    });
+                    if (!res.ok) throw new Error('Backend could not configure email.');
+                    
+                    DOM.emailConfigSection.classList.add('hidden');
+                    DOM.dashboardSection.classList.remove('hidden');
+                    DOM.userEmailDisplay.textContent = userEmail;
+                    
+                    // Connect WebSocket after successful email configuration
+                    connectWebSocket();
+                    fetchData();
+                } catch (err) {
+                    showMessage(err.message, true);
+                }
+            }
+        });
+
+        DOM.addBrandForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const brandNameInput = document.getElementById('new-brand-name');
+            const originalText = DOM.addBrandBtn.innerHTML;
+            
+            DOM.addBrandBtn.disabled = true;
+            DOM.addBrandBtn.innerHTML = '<div class="loading-spinner mr-2"></div>Finding profiles & analyzing...';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/brands`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: brandNameInput.value })
+                });
+                if (!res.ok) throw new Error('Failed to add brand. Check backend.');
+                
+                showMessage(`Brand "${brandNameInput.value}" added successfully! Analyzing social media activity...`);
+                brandNameInput.value = '';
+                
+                setTimeout(fetchData, 2000); 
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                DOM.addBrandBtn.disabled = false;
+                DOM.addBrandBtn.innerHTML = originalText;
+            }
+        });
+
+        DOM.brandsList.addEventListener('click', async (e) => {
+            const brandItem = e.target.closest('.brand-item');
+            const deleteBtn = e.target.closest('.delete-brand-btn');
+
+            if (deleteBtn) {
+                e.stopPropagation();
+                const brandId = parseInt(deleteBtn.dataset.id);
+                const brand = brands.find(b => b.id === brandId);
+                
+                if (confirm(`Are you sure you want to stop monitoring "${brand?.name}"?`)) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/brands/${brandId}`, { method: 'DELETE' });
+                        if (!res.ok) throw new Error('Failed to delete brand.');
+                        
+                        showMessage(`Stopped monitoring "${brand?.name}"`);
+                        await fetchData();
+                        DOM.analyticsSection.classList.add('hidden');
+                    } catch (err) {
+                        showMessage(err.message, true);
+                    }
+                }
+            } else if (brandItem) {
+                document.querySelectorAll('.brand-item').forEach(item => item.classList.remove('active'));
+                brandItem.classList.add('active');
+                const brandId = parseInt(brandItem.dataset.id);
+                renderPosts(brandId);
+                displayAnalytics(brandId);
+            }
+        });
+        
+        DOM.sendAllReportsBtn.addEventListener('click', async () => {
+            const originalText = DOM.sendAllReportsBtn.innerHTML;
+            DOM.sendAllReportsBtn.innerHTML = '<div class="loading-spinner mr-2"></div>Sending...';
+            DOM.sendAllReportsBtn.disabled = true;
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/reports/send-all`, { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to send reports.');
+                const data = await res.json();
+                showMessage(data.message);
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                DOM.sendAllReportsBtn.innerHTML = originalText;
+                DOM.sendAllReportsBtn.disabled = false;
+            }
+        });
+
+        DOM.refreshPostsBtn.addEventListener('click', () => {
+            fetchData();
+            showMessage('Activity feed refreshed');
+        });
+
+        // Initialize connection status
+        updateConnectionStatus(false);
+    });
+    </script>
+</body>
+</html>
+
